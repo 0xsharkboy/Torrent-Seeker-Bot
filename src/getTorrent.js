@@ -73,9 +73,11 @@ module.exports = (bot) => {
     let itemIndex = savedData.itemIndex;
 
     if (data === 'next' && itemIndex < items.length - 1) {
-      await sendResult(chatId, savedData.msgId, itemIndex + 1, items)
+      await sendResult(chatId, savedData.msgId, itemIndex + 1, items);
     } else if (data === 'prev' && itemIndex > 0) {
-      await sendResult(chatId, savedData.msgId, itemIndex - 1, items)
+      await sendResult(chatId, savedData.msgId, itemIndex - 1, items);
+    } else if (data === 'get_magnet') {
+      bot.sendMessage(chatId, items[itemIndex].Magnet)
     } else {
       bot.answerCallbackQuery(callbackQuery.id);
       return;
