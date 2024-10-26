@@ -3,6 +3,34 @@ const axios = require('axios');
 module.exports = (bot) => {
   const userData = new Map(); // Map to store user-specific items
 
+  async function sendResult(chatId, msgId, itemIndex, items) {
+    const item = items[itemIndex];
+    const messageText = `📄 **${item.Name}**\n\n` +
+                        `👤 Uploaded by: ${item.UploadedBy ?? 'N/A'}\n` +
+                        `🌍 Source: [${item.Url.split('/')[2]}](${item.Url})\n` +
+                        `📁 Size: ${item.Size ?? 'N/A'}\n` +
+                        `📉 Leechers: ${item.Leechers ?? 'N/A'}\n` +
+                        `📈 Seeders: ${item.Seeders ?? 'N/A'}\n\n` +
+                        `Result ${itemIndex + 1}/${items.length}`;
+
+    await bot.editMessageText(messageText, {
+      chat_id: chatId,
+      message_id: msgId,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "Get magnet", callback_data: 'get_magnet' }],
+          [
+            { text: "⬅️ Previous", callback_data: 'prev' },
+            { text: "Next ➡️", callback_data: 'next' }
+          ]
+        ]
+      }
+    }).then(sentMessage => {
+      userData.set(chatId, { msgId: sentMessage.message_id, items, itemIndex });
+    });
+  }
+
   bot.onText(/\/search (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const query = match[1];
@@ -33,34 +61,6 @@ module.exports = (bot) => {
     }
   });
 
-  async function sendResult(chatId, msgId, itemIndex, items) {
-    const item = items[itemIndex];
-    const messageText = `📄 **${item.Name}**\n\n` +
-                        `👤 Uploaded by: ${item.UploadedBy ?? 'N/A'}\n` +
-                        `🌍 Source: [${item.Url.split('/')[2]}](${item.Url})\n` +
-                        `📁 Size: ${item.Size ?? 'N/A'}\n` +
-                        `📉 Leechers: ${item.Leechers ?? 'N/A'}\n` +
-                        `📈 Seeders: ${item.Seeders ?? 'N/A'}\n\n` +
-                        `Result ${itemIndex + 1}/${items.length}`;
-
-    await bot.editMessageText(messageText, {
-      chat_id: chatId,
-      message_id: msgId,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Magnet", url: 'http://0xsharkboy.dev' }], // Replace with actual magnet link if available
-          [
-            { text: "⬅️ Previous", callback_data: `prev` },
-            { text: "Next ➡️", callback_data: `next` }
-          ]
-        ]
-      }
-    }).then(sentMessage => {
-      userData.set(chatId, { msgId: sentMessage.message_id, items, itemIndex });
-    });
-  }
-
   bot.on('callback_query', async (callbackQuery) => {
     const msg = callbackQuery.message;
     const chatId = msg.chat.id;
@@ -73,39 +73,13 @@ module.exports = (bot) => {
     let itemIndex = savedData.itemIndex;
 
     if (data === 'next' && itemIndex < items.length - 1) {
-      itemIndex++;
+      await sendResult(chatId, savedData.msgId, itemIndex + 1, items)
     } else if (data === 'prev' && itemIndex > 0) {
-      itemIndex--;
+      await sendResult(chatId, savedData.msgId, itemIndex - 1, items)
     } else {
       bot.answerCallbackQuery(callbackQuery.id);
       return;
     }
-
-    userData.set(chatId, { ...savedData, itemIndex }); // Update the userData with the new index
-
-    const item = items[itemIndex];
-    const messageText = `📄 **${item.Name}**\n\n` +
-                        `👤 Uploaded by: ${item.UploadedBy ?? 'N/A'}\n` +
-                        `🌍 Source: [${item.Url.split('/')[2]}](${item.Url})\n` +
-                        `📁 Size: ${item.Size ?? 'N/A'}\n` +
-                        `📉 Leechers: ${item.Leechers ?? 'N/A'}\n` +
-                        `📈 Seeders: ${item.Seeders ?? 'N/A'}\n\n` +
-                        `Result ${itemIndex + 1}/${items.length}`;
-
-    await bot.editMessageText(messageText, {
-      chat_id: chatId,
-      message_id: msg.message_id,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Magnet", url: 'http://0xsharkboy.dev' }], // Replace with actual magnet link if available
-          [
-            { text: "⬅️ Previous", callback_data: `prev` },
-            { text: "Next ➡️", callback_data: `next` }
-          ]
-        ]
-      }
-    });
 
     bot.answerCallbackQuery(callbackQuery.id);
   });
